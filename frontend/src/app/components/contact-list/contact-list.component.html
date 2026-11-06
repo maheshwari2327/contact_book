@@ -1,0 +1,276 @@
+<!-- Layer: Frontend Layer (Contact List Template) -->
+<div class="contact-list-container">
+
+  <!-- Success Notification Alert -->
+  <div *ngIf="successMessage" class="alert alert-success fade-in">
+    <span class="alert-icon">✅</span>
+    <span class="alert-text">{{ successMessage }}</span>
+    <button class="alert-close" (click)="successMessage = ''">&times;</button>
+  </div>
+
+  <!-- Error Notification Alert -->
+  <div *ngIf="errorMessage" class="alert alert-danger fade-in">
+    <span class="alert-icon">⚠️</span>
+    <span class="alert-text">{{ errorMessage }}</span>
+    <button class="alert-close" (click)="errorMessage = ''">&times;</button>
+  </div>
+
+  <!-- Top Action Toolbar: Search Bar & Add Button -->
+  <div class="toolbar-card">
+    <div class="search-box">
+      <span class="search-icon">🔍</span>
+      <input
+        type="text"
+        [(ngModel)]="searchTerm"
+        (keyup.enter)="onSearch()"
+        placeholder="Search contacts by name or city..."
+        class="search-input"
+      />
+      <button *ngIf="searchTerm" class="clear-btn" (click)="clearSearch()" title="Clear search">
+        &times;
+      </button>
+      <button class="btn btn-search" (click)="onSearch()">
+        Search
+      </button>
+    </div>
+
+    <div class="toolbar-actions">
+      <button class="btn btn-add" (click)="openAddModal()">
+        <span class="btn-icon">➕</span> Add Contact
+      </button>
+    </div>
+  </div>
+
+  <!-- Main Table Card -->
+  <div class="table-card">
+    <div class="table-header-info">
+      <div>
+        <h2 class="section-title">All Contacts</h2>
+        <p class="section-subtitle">
+          Showing {{ contacts.length }} of {{ totalElements }} contacts found
+        </p>
+      </div>
+
+      <!-- Page Size Selector -->
+      <div class="page-size-selector">
+        <label for="pageSizeSelect">Show:</label>
+        <select
+          id="pageSizeSelect"
+          [value]="size"
+          (change)="onPageSizeChange($any($event.target).value)"
+          class="size-select"
+        >
+          <option [value]="5">5 per page</option>
+          <option [value]="10">10 per page</option>
+          <option [value]="20">20 per page</option>
+        </select>
+      </div>
+    </div>
+
+    <!-- Loading State Indicator -->
+    <div *ngIf="isLoading" class="loading-state">
+      <div class="spinner"></div>
+      <p>Loading contacts from MySQL database...</p>
+    </div>
+
+    <!-- Empty State -->
+    <div *ngIf="!isLoading && contacts.length === 0" class="empty-state">
+      <div class="empty-icon">📇</div>
+      <h3>No Contacts Found</h3>
+      <p *ngIf="searchTerm">
+        No contacts match "<strong>{{ searchTerm }}</strong>". Try searching for a different name or city.
+      </p>
+      <p *ngIf="!searchTerm">
+        Your contact book is currently empty. Click "Add Contact" above to create one!
+      </p>
+      <button *ngIf="searchTerm" class="btn btn-secondary mt-3" (click)="clearSearch()">
+        Reset Search Filter
+      </button>
+    </div>
+
+    <!-- Contact List Table -->
+    <div *ngIf="!isLoading && contacts.length > 0" class="table-responsive">
+      <table class="contacts-table">
+        <thead>
+          <tr>
+            <th class="th-fav" title="Click star to toggle favorite status">Fav</th>
+            <!-- Clickable Sort by Name Header (Stretch Goal) -->
+            <th class="th-sortable" (click)="toggleSort('name')" title="Click to sort by name">
+              <div class="sort-header-content">
+                <span>Name</span>
+                <span class="sort-indicator" *ngIf="sortBy === 'name'">
+                  {{ sortDir === 'asc' ? '▲' : '▼' }}
+                </span>
+                <span class="sort-indicator inactive" *ngIf="sortBy !== 'name'">↕</span>
+              </div>
+            </th>
+            <th>Phone</th>
+            <th>Email</th>
+            <!-- City Column -->
+            <th class="th-sortable" (click)="toggleSort('city')" title="Click to sort by city">
+              <div class="sort-header-content">
+                <span>City</span>
+                <span class="sort-indicator" *ngIf="sortBy === 'city'">
+                  {{ sortDir === 'asc' ? '▲' : '▼' }}
+                </span>
+                <span class="sort-indicator inactive" *ngIf="sortBy !== 'city'">↕</span>
+              </div>
+            </th>
+            <th class="th-actions">Actions</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr *ngFor="let contact of contacts" [class.favorite-row]="contact.favorite">
+            <!-- Favorite Star Column -->
+            <td class="td-fav">
+              <button
+                class="star-btn"
+                [class.starred]="contact.favorite"
+                (click)="onToggleFavorite(contact, $event)"
+                [title]="contact.favorite ? 'Remove from favorites' : 'Mark as favorite'"
+              >
+                {{ contact.favorite ? '★' : '☆' }}
+              </button>
+            </td>
+
+            <!-- Name with Avatar initials -->
+            <td class="td-name">
+              <div class="contact-identity">
+                <div class="avatar-circle" [class.fav-circle]="contact.favorite">
+                  {{ contact.name.charAt(0).toUpperCase() }}
+                </div>
+                <div>
+                  <div class="name-text">{{ contact.name }}</div>
+                  <span *ngIf="contact.favorite" class="badge-favorite">Favorite</span>
+                </div>
+              </div>
+            </td>
+
+            <!-- Phone -->
+            <td class="td-phone">
+              <span class="phone-link">
+                📞 {{ contact.phone }}
+              </span>
+            </td>
+
+            <!-- Email -->
+            <td class="td-email">
+              <span class="email-link">
+                ✉️ {{ contact.email }}
+              </span>
+            </td>
+
+            <!-- City -->
+            <td class="td-city">
+              <span class="city-pill">
+                📍 {{ contact.city }}
+              </span>
+            </td>
+
+            <!-- Actions (Edit & Delete) -->
+            <td class="td-actions">
+              <div class="actions-group">
+                <button
+                  class="action-btn btn-edit"
+                  (click)="openEditModal(contact)"
+                  title="Edit Contact"
+                >
+                  ✏️ Edit
+                </button>
+                <button
+                  class="action-btn btn-delete"
+                  (click)="openDeleteModal(contact)"
+                  title="Delete Contact"
+                >
+                  🗑️ Delete
+                </button>
+              </div>
+            </td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+
+    <!-- Server-Side Pagination Footer (Stretch Goal) -->
+    <div *ngIf="!isLoading && totalPages > 1" class="pagination-footer">
+      <div class="pagination-info">
+        Page <strong>{{ page + 1 }}</strong> of <strong>{{ totalPages }}</strong>
+      </div>
+      <div class="pagination-controls">
+        <button
+          class="page-btn"
+          [disabled]="page === 0"
+          (click)="goToPage(0)"
+          title="First Page"
+        >
+          &laquo;
+        </button>
+        <button
+          class="page-btn"
+          [disabled]="page === 0"
+          (click)="goToPage(page - 1)"
+          title="Previous Page"
+        >
+          Previous
+        </button>
+
+        <span class="page-number-pill">
+          {{ page + 1 }}
+        </span>
+
+        <button
+          class="page-btn"
+          [disabled]="page >= totalPages - 1"
+          (click)="goToPage(page + 1)"
+          title="Next Page"
+        >
+          Next
+        </button>
+        <button
+          class="page-btn"
+          [disabled]="page >= totalPages - 1"
+          (click)="goToPage(totalPages - 1)"
+          title="Last Page"
+        >
+          &raquo;
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Add / Edit Contact Modal Dialog -->
+  <div *ngIf="showFormModal" class="modal-backdrop" (click)="closeFormModal()">
+    <div class="modal-dialog" (click)="$event.stopPropagation()">
+      <app-contact-form
+        [contactToEdit]="selectedContactForEdit"
+        (formSubmit)="handleFormSubmit($event)"
+        (formCancel)="closeFormModal()"
+      ></app-contact-form>
+    </div>
+  </div>
+
+  <!-- Delete Confirmation Modal Dialog -->
+  <div *ngIf="showDeleteModal" class="modal-backdrop" (click)="closeDeleteModal()">
+    <div class="modal-dialog modal-small" (click)="$event.stopPropagation()">
+      <div class="delete-dialog-card fade-in">
+        <div class="delete-dialog-icon">⚠️</div>
+        <h3>Confirm Deletion</h3>
+        <p>
+          Are you sure you want to delete contact
+          <strong>{{ contactToDelete?.name }}</strong>?
+        </p>
+        <p class="delete-subtext">This action cannot be undone.</p>
+        <div class="delete-actions">
+          <button class="btn btn-secondary" (click)="closeDeleteModal()">
+            Cancel
+          </button>
+          <button class="btn btn-danger-solid" (click)="executeDelete()">
+            Yes, Delete Contact
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+</div>
+
